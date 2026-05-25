@@ -4,6 +4,7 @@ import { DatabaseService } from "./database";
 import { ConfigService } from "./config";
 import { CommunityService, GetCurrentWeekId } from "./community";
 import { UpdateService } from "./updateService";
+import { Analyze as AiAnalyze } from "./ai-service";
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -232,6 +233,93 @@ function RegisterIpcHandlers(): void {
 
     ipcMain.handle("shell:open-external", (_event, url: string) => {
         return shell.openExternal(url);
+    });
+
+    ipcMain.handle("charts:hourly-distribution", () => {
+        return databaseService!.GetHourlyDistribution();
+    });
+
+    ipcMain.handle("charts:weekday-distribution", () => {
+        return databaseService!.GetWeekdayDistribution();
+    });
+
+    ipcMain.handle("charts:monthly-trend", () => {
+        return databaseService!.GetMonthlyTrend();
+    });
+
+    ipcMain.handle("charts:duration-distribution", () => {
+        return databaseService!.GetAllDurations();
+    });
+
+    // 设置通道（API Key 使用系统加密存储，仅允许白名单内的 key）
+    const ALLOWED_SETTINGS: Set<string> = new Set([
+        "ai_provider", "ai_api_key", "ai_api_endpoint", "ai_model",
+    ]);
+
+    ipcMain.handle("settings:get", (...args) => {
+        const key: string = args[1] as string;
+        if (!ALLOWED_SETTINGS.has(key)) {
+            throw new Error(`不允许的设置项: ${key}`);
+        }
+        if (key === "ai_api_key") {
+            return databaseService!.GetSecureSetting(key);
+        }
+        return databaseService!.GetSetting(key);
+    });
+
+    ipcMain.handle("settings:set", (...args) => {
+        const key: string = args[1] as string;
+        const value: string = args[2] as string;
+        if (!ALLOWED_SETTINGS.has(key)) {
+            throw new Error(`不允许的设置项: ${key}`);
+        }
+        if (key === "ai_api_key") {
+            databaseService!.SetSecureSetting(key, value);
+        } else {
+            databaseService!.SetSetting(key, value);
+        }
+    });
+
+    ipcMain.handle("ai:analyze", async () => {
+        const db = databaseService!;
+        const stats = db.GetStats();
+        const hourly = db.GetHourlyDistribution();
+        const weekday = db.GetWeekdayDistribution();
+        const monthly = db.GetMonthlyTrend();
+        const durations = db.GetAllDurations();
+
+        const sorted = [...durations].sort((a, b) => a - b);
+        const mid: number = Math.floor(sorted.length / 2);
+        const median: number = sorted.length === 0
+            ? 0
+            : sorted.length % 2 !== 0
+                ? sorted[mid]!
+                : (sorted[mid - 1]! + sorted[mid]!) / 2;
+        const durationStats = {
+            Min: sorted[0] ?? 0,
+            Max: sorted[sorted.length - 1] ?? 0,
+            Avg: stats.AverageDuration,
+            Median: median,
+        };
+
+        const rawProvider: string = db.GetSetting("ai_provider") ?? "local";
+        const provider: "openai" | "local" = rawProvider === "openai" ? "openai" : "local";
+        const config = {
+            Provider: provider,
+            ApiKey: db.GetSecureSetting("ai_api_key") ?? "",
+            ApiEndpoint: db.GetSetting("ai_api_endpoint") ?? "https://api.openai.com/v1/chat/completions",
+            Model: db.GetSetting("ai_model") ?? "gpt-4o-mini",
+        };
+
+        try {
+            return await AiAnalyze(
+                { ...stats, HourlyDistribution: hourly, WeekdayDistribution: weekday, MonthlyTrend: monthly, DurationStats: durationStats },
+                config
+            );
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "分析失败";
+            throw new Error(message.length > 200 ? message.slice(0, 200) + "..." : message);
+        }
     });
 }
 

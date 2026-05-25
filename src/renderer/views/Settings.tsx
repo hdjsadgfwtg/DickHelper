@@ -14,9 +14,13 @@ import {
     Badge,
     Switch,
     SegmentedControl,
+    Select,
+    TextInput,
+    PasswordInput,
 } from "@mantine/core";
 import {
     IconAlertCircle,
+    IconBrain,
     IconDatabase,
     IconDownload,
     IconInfoCircle,
@@ -158,7 +162,7 @@ export const Settings = () => {
                     设置
                 </Title>
                 <Text size="sm" c="dimmed">
-                    管理数据导入导出，并查看应用信息。
+                    管理数据导入导出、AI 分析配置，并查看应用信息。
                 </Text>
             </Stack>
 
@@ -212,6 +216,8 @@ export const Settings = () => {
                     </Notification>
                 )}
             </Paper>
+
+            <AiConfigSection />
 
             <Paper shadow="sm" radius="md" p="lg" withBorder>
                 <Group justify="space-between" align="flex-start" mb="xs">
@@ -361,5 +367,95 @@ export const Settings = () => {
                 </Stack>
             </Paper>
         </Stack>
+    );
+};
+
+const PROVIDER_OPTIONS: { value: string; label: string }[] = [
+    { value: "local", label: "本地规则分析（无需 API）" },
+    { value: "openai", label: "OpenAI 兼容接口" },
+];
+
+const AiConfigSection = () => {
+    const [provider, setProvider] = useState<string>("local");
+    const [apiEndpoint, setApiEndpoint] = useState<string>("https://api.openai.com/v1/chat/completions");
+    const [apiKey, setApiKey] = useState<string>("");
+    const [model, setModel] = useState<string>("gpt-4o-mini");
+    const [saved, setSaved] = useState<boolean>(false);
+    const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        DatabaseService.GetSetting("ai_provider").then((v) => { if (v !== null) setProvider(v); });
+        DatabaseService.GetSetting("ai_api_endpoint").then((v) => { if (v !== null) setApiEndpoint(v); });
+        DatabaseService.GetSetting("ai_api_key").then((v) => { if (v !== null) setApiKey(v); });
+        DatabaseService.GetSetting("ai_model").then((v) => { if (v !== null) setModel(v); });
+        return () => {
+            if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current);
+        };
+    }, []);
+
+    const HandleSave = async (): Promise<void> => {
+        await DatabaseService.SetSetting("ai_provider", provider);
+        await DatabaseService.SetSetting("ai_api_endpoint", apiEndpoint);
+        await DatabaseService.SetSetting("ai_api_key", apiKey);
+        await DatabaseService.SetSetting("ai_model", model);
+        setSaved(true);
+        if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
+    };
+
+    const showApiFields: boolean = provider === "openai";
+
+    return (
+        <Paper shadow="sm" radius="md" p="lg" withBorder>
+            <Group gap="sm" mb="xs">
+                <IconBrain size={22} />
+                <Title order={4}>AI 分析配置</Title>
+            </Group>
+            <Text size="sm" c="dimmed" mb="md">
+                使用任意 OpenAI Chat Completions 兼容接口进行数据分析。
+            </Text>
+
+            <Stack gap="sm">
+                <Select
+                    label="分析方式"
+                    data={PROVIDER_OPTIONS}
+                    value={provider}
+                    onChange={(v) => { if (v !== null) setProvider(v); }}
+                />
+
+                {showApiFields && (
+                    <>
+                        <TextInput
+                            label="API 地址"
+                            description="任何兼容 OpenAI Chat v1 Completions 的端点"
+                            placeholder="https://api.openai.com/v1/chat/completions"
+                            value={apiEndpoint}
+                            onChange={(e) => setApiEndpoint(e.currentTarget.value)}
+                        />
+                        <PasswordInput
+                            label="API Key"
+                            placeholder="sk-..."
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.currentTarget.value)}
+                        />
+                        <TextInput
+                            label="模型名称"
+                            placeholder="gpt-4o-mini"
+                            value={model}
+                            onChange={(e) => setModel(e.currentTarget.value)}
+                        />
+                    </>
+                )}
+
+                <Group>
+                    <Button variant="filled" color="blue" onClick={HandleSave}>
+                        保存配置
+                    </Button>
+                    {saved && (
+                        <Text size="sm" c="green">已保存</Text>
+                    )}
+                </Group>
+            </Stack>
+        </Paper>
     );
 };

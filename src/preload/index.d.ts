@@ -1,5 +1,5 @@
 // 声明 window.electronAPI 类型，让渲染进程可以直接使用
-import type { IRecordRaw, IStats, IDailyCount, IImportResult, IUpdateSettings, IUpdateState, UpdateSource, ICommunityStats, IAppConfig } from "@dickhelper/shared";
+import type { IRecordRaw, IStats, IDailyCount, IImportResult, IUpdateSettings, IUpdateState, UpdateSource, ICommunityStats, IAppConfig, IHourlyCount, IWeekdayCount, IMonthlyCount } from "@dickhelper/shared";
 
 interface IImportRecord {
     Id: string;
@@ -25,6 +25,13 @@ declare global {
             CheckForUpdates: () => Promise<IUpdateState>;
             DownloadUpdate: () => Promise<IUpdateState>;
             InstallUpdate: () => Promise<void>;
+            GetHourlyDistribution: () => Promise<IHourlyCount[]>;
+            GetWeekdayDistribution: () => Promise<IWeekdayCount[]>;
+            GetMonthlyTrend: () => Promise<IMonthlyCount[]>;
+            GetDurationDistribution: () => Promise<number[]>;
+            GetSetting: (key: string) => Promise<string | null>;
+            SetSetting: (key: string, value: string) => Promise<void>;
+            RequestAiAnalysis: () => Promise<string>;
             OnRecordsUpdated: (callback: () => void) => () => void;
             OnUpdateStateChanged: (callback: (state: IUpdateState) => void) => () => void;
             OpenExternal: (url: string) => Promise<void>;

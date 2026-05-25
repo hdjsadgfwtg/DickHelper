@@ -20,6 +20,13 @@ const electronAPI = {
     CheckForUpdates: (): Promise<IUpdateState> => ipcRenderer.invoke("updates:check"),
     DownloadUpdate: (): Promise<IUpdateState> => ipcRenderer.invoke("updates:download"),
     InstallUpdate: (): Promise<void> => ipcRenderer.invoke("updates:install"),
+    GetHourlyDistribution: (): Promise<unknown[]> => ipcRenderer.invoke("charts:hourly-distribution"),
+    GetWeekdayDistribution: (): Promise<unknown[]> => ipcRenderer.invoke("charts:weekday-distribution"),
+    GetMonthlyTrend: (): Promise<unknown[]> => ipcRenderer.invoke("charts:monthly-trend"),
+    GetDurationDistribution: (): Promise<number[]> => ipcRenderer.invoke("charts:duration-distribution"),
+    GetSetting: (key: string): Promise<string | null> => ipcRenderer.invoke("settings:get", key),
+    SetSetting: (key: string, value: string): Promise<void> => ipcRenderer.invoke("settings:set", key, value),
+    RequestAiAnalysis: (): Promise<string> => ipcRenderer.invoke("ai:analyze"),
     OnRecordsUpdated: (callback: () => void): (() => void) => {
         const listener = (): void => callback();
         ipcRenderer.on("records-updated", listener);
