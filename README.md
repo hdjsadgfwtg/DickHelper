@@ -7,9 +7,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Mantine](https://img.shields.io/badge/Mantine-7-339AF0.svg)](https://mantine.dev/)
 
-一个简单、高效、易用的打飞机记录工具，帮助你科学管理✈️生活。
+一个简单、高效、易用的打飞机记录工具。
 
-An easy-to-use masturbation management recording tool, now as a cross-platform desktop app.
+An easy-to-use masturbation management recording tool.
 
 <img width="944" height="615" alt="image" src="https://github.com/user-attachments/assets/124fe82c-088e-4b3f-995e-321a693aaf3f" />
 
@@ -21,7 +21,7 @@ An easy-to-use masturbation management recording tool, now as a cross-platform d
 
 ## v2 重构完成 | v2 Rewrite Complete
 
-DickHelper v2 已从旧版 Web 应用完全重写为 **Electron 桌面应用**。使用更现代的技术栈，修复了旧版数据模型的 bug，体验更流畅。
+DickHelper v2 已从旧版 Web 应用重写为 **Electron 桌面应用**。使用更现代的技术栈，修复了旧版数据模型的 bug，体验更流畅。
 
 - **数据迁移**: v2 支持从旧版导出的 JSON 文件导入数据（自动识别旧格式并映射字段，按 UUID 去重）
 
@@ -36,9 +36,7 @@ DickHelper v2 has been completely rewritten as an **Electron desktop app** with 
 - 🔒 **数据本地存储**: SQLite 数据库，数据完全在本地，无需担心隐私泄露 | **Local Storage**: SQLite database, all data stored locally
 - 📊 **统计看板**: 总次数、平均时长、周/月频率统计 + 发射日历热力图 | **Statistics**: Total count, avg duration, weekly/monthly frequency + heatmap calendar
 - ⏱️ **计时器**: 开始/暂停/继续/停止，精确记录每次时长 | **Timer**: Start/pause/resume/stop with precise duration tracking
-- 🔄 **数据导入导出**: JSON 格式，兼容旧版数据，按 UUID 去重 | **Import/Export**: JSON format, legacy compatible, UUID dedup
 - 📋 **历史记录**: 浏览、搜索、删除单条或清空全部 | **History**: Browse, delete individual records or clear all
-- 📌 **系统托盘**: 关闭窗口缩到托盘，后台运行不打扰 | **System Tray**: Minimize to tray, runs quietly in background
 
 ---
 
@@ -69,35 +67,39 @@ npm run dev
 - Vite dev server（React 渲染进程热重载）
 - Electron 主进程（自动打开桌面窗口）
 
-### 构建生产版本 | Build for Production
+### 发布版本 | Release
 
-```bash
-# 构建可分发安装包 | Build distributable package
-npm run build
-```
+GitHub Release 使用 `vX.Y.Z` tag，例如 `v2.0.4`。
 
-构建输出在 `out/` 目录：
-- `out/main/` — Electron 主进程
-- `out/preload/` — 预加载脚本
-- `out/renderer/` — React 渲染进程（静态文件）
+发布前须先将 `package.json` 的 `version` 调整为不带 `v` 的版本号，例如 `2.0.4`。
 
-打包工具 `electron-builder` 已配置（见 `electron-builder.yml`），支持三平台输出：
-- **Windows**: NSIS 安装包
-- **macOS**: DMG
-- **Linux**: AppImage
+Release workflow 会校验：
+- `RELEASE_TAG` 必须形如 `v2.0.4`
+- `package.json.version` 必须等于 `2.0.4`
 
-CI/CD 通过 GitHub Actions（`.github/workflows/release.yml`）自动构建并上传到 GitHub Release。
+校验通过后，workflow 会打包 Windows / macOS / Linux 安装包，并上传自动更新所需的 `latest.yml`、`latest-mac.yml`、`latest-linux.yml` 等 metadata。
+
+已安装 `2.0.3` 的客户端会在发现 `2.0.4` metadata 后会自动提示更新。
+
+### 自动更新 | Auto Update
+
+应用启动时会自动检查更新。发现新版本后，会在应用内弹窗询问是否下载，不会静默下载。下载完成后，用户可以手动点击重启安装。
+
+更新源默认使用 `https://ghfast.top` 镜像，适合 GitHub 访问不稳定的中国大陆环境；考虑到镜像源的SLA并不稳定，用户可在设置页当中自行切换到 GitHub 直连。
+
+若当前更新源检查失败，应用将提示失败并建议切换源，不会自动回退。
+
+测试自动更新的推荐流程见 [自动更新测试指南](docs/auto-update-testing.md)。
 
 ## 技术栈 | Tech Stack
 
-| 层 | Layer | 技术 | Technology |
-|----|-------|------|------------|
-| 桌面框架 | Desktop Shell | Electron 35 | — |
-| UI 框架 | UI Framework | React 19.1 | — |
-| 语言 | Language | TypeScript 5.7 (strict) | — |
-| 构建 | Build | electron-vite + Vite 6 | — |
-| 组件库 | UI Library | Mantine 7 | — |
-| 数据库 | Database | SQLite via sql.js (WASM) | — |
+| 层 | Layer | 技术 |
+|----|-------|------|
+| GUI框架 | Desktop Shell | Electron 35 |
+| UI 框架 | UI Framework | React 19.1 |
+| 语言 | Language | TypeScript 5.7 (strict) |
+| 组件库 | UI Library | Mantine 7 |
+| 数据库 | Database | SQLite via sql.js (WASM) |
 
 ## 数据迁移 | Data Migration
 
@@ -108,7 +110,7 @@ CI/CD 通过 GitHub Actions（`.github/workflows/release.yml`）自动构建并�
 3. v2 自动识别旧格式，将 `startTime` 映射为 `EndTime`，按 UUID 跳过重复记录
 4. 导入完成后显示结果：成功 / 跳过重复 / 拒绝无效
 
-详细说明见 [迁移文档](docs/migration-guide.md)
+详细见 [迁移文档](docs/migration-guide.md)
 
 ---
 
@@ -117,6 +119,8 @@ CI/CD 通过 GitHub Actions（`.github/workflows/release.yml`）自动构建并�
 所有数据存储在本地 SQLite 数据库中，不会上传到任何服务器。未经您允许，我们不会收集您的任何信息。
 
 All data is stored in a local SQLite database and is never uploaded to any server. We do not collect any of your information without your permission.
+
+当您使用需要网络服务才能提供的功能时（开发中），我们需要您的数据才能继续为您提供相关服务，但是除非您显式同意，否则我们在默认的状态下不会上传您的任何数据。
 
 ---
 

@@ -1,7 +1,8 @@
 {
   "name": "dickhelper",
   "private": true,
-  "version": "2.0.0",
+  "workspaces": ["packages/shared"],
+  "version": "2.0.5",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
@@ -13,6 +14,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "recharts": "^3.8.1",
     "sql.js": "^1.14.0"
   },

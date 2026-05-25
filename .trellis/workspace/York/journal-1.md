@@ -178,3 +178,139 @@ Fixed Electron startup white screen by correcting renderer electronAPI access an
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Add Electron auto update
+
+**Date**: 2026-05-24
+**Task**: Add Electron auto update
+**Branch**: `main`
+
+### Summary
+
+Implemented electron-updater based update checks with user-confirmed downloads, ghfast/GitHub source selection, release metadata publishing, version-tag validation, docs, specs, and review fixes.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7c5b756` | (see git log) |
+| `62e073e` | (see git log) |
+| `0f03e7e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 7: Auto update testing docs
+
+**Date**: 2026-05-24
+**Task**: Auto update testing docs
+**Branch**: `main`
+
+### Summary
+
+Added a short auto-update testing guide and linked it from README.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0fe18b3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 8: 实现 Electron 单例锁
+
+**Date**: 2026-05-25
+**Task**: 实现 Electron 单例锁
+**Branch**: `main`
+
+### Summary
+
+使用 app.requestSingleInstanceLock() 实现单例模式，防止多实例多托盘图标
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `92b71d9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 9: App icons, monorepo setup, menu bar & star button
+
+**Date**: 2026-05-25
+**Task**: App icons, monorepo setup, menu bar & star button
+**Branch**: `main`
+
+### Summary
+
+Added stopwatch.png as app icon for desktop and tray; set up monorepo with packages/shared/ workspace for pure TypeScript types; hid default Electron menu bar in production; replaced tech stack display with GitHub star button in Settings.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cae39f3` | (see git log) |
+| `25083e2` | (see git log) |
+| `0c3a7db` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

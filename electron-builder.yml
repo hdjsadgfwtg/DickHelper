@@ -2,11 +2,19 @@ appId: com.york.dickhelper
 productName: DickHelper
 directories:
   output: dist
+  buildResources: resources
+icon: resources/stopwatch.png
 files:
   - out/**/*
+  - resources/**/*
+publish:
+  provider: generic
+  url: https://github.com/zzzdajb/DickHelper/releases/latest/download/
 win:
   target: nsis
 mac:
-  target: dmg
+  target:
+    - dmg
+    - zip
 linux:
   target: AppImage

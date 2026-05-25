@@ -1,4 +1,5 @@
-import type { IRecord, IRecordRaw, IStats, IDailyCount, IImportResult, ICommunityStats, IAppConfig } from "../types/IRecord";
+import type { IRecord, IRecordRaw, IStats, IDailyCount, IImportResult } from "@dickhelper/shared";
+import type { ICommunityStats, IAppConfig } from "../types/IRecord";
 
 // 检查 electronAPI 是否可用，不在 Electron 环境时给出明确错误
 function GetApi(): Window["electronAPI"] {

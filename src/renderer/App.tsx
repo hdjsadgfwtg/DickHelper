@@ -9,6 +9,9 @@ import {
     Group,
     Divider,
     createTheme,
+    Modal,
+    Button,
+    Text,
 } from "@mantine/core";
 import {
     IconClock,
@@ -16,6 +19,7 @@ import {
     IconHistory,
     IconSettings,
     IconDroplet,
+    IconDownload,
     IconBolt,
     IconFingerprint,
 } from "@tabler/icons-react";
@@ -26,6 +30,8 @@ import { HistoryList } from "./views/HistoryList";
 import { Settings } from "./views/Settings";
 import { Prediction } from "./views/Prediction";
 import { Fingerprint } from "./views/Fingerprint";
+import { useUpdateState } from "./hooks/useUpdateState";
+import { UpdateService } from "./services/UpdateService";
 
 type View = "record" | "stats" | "history" | "prediction" | "fingerprint" | "settings";
 
@@ -90,10 +96,52 @@ const NAV_ITEMS: { view: View; label: string; icon: typeof IconClock }[] = [
 
 export const App = () => {
     const [activeView, setActiveView] = useState<View>("record");
+    const [dismissedUpdateVersion, setDismissedUpdateVersion] = useState<string | null>(null);
+    const { UpdateState } = useUpdateState();
+
+    const updateVersion: string | null = UpdateState?.AvailableVersion ?? null;
+    const shouldShowUpdateModal: boolean =
+        UpdateState?.IsUpdateAvailable === true &&
+        updateVersion !== null &&
+        dismissedUpdateVersion !== updateVersion;
+
+    const HandleDownloadUpdate = (): void => {
+        void UpdateService.DownloadUpdate();
+    };
+
+    const HandleDismissUpdate = (): void => {
+        setDismissedUpdateVersion(updateVersion);
+    };
 
     return (
         <ErrorBoundary>
         <MantineProvider theme={theme}>
+            <Modal
+                opened={shouldShowUpdateModal}
+                onClose={HandleDismissUpdate}
+                title="发现新版本"
+                centered
+            >
+                <Stack gap="md">
+                    <Text size="sm">
+                        当前版本 v{UpdateState?.CurrentVersion}，发现新版本 v{updateVersion}。
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                        是否现在下载更新？下载完成后可手动重启安装。
+                    </Text>
+                    <Group justify="flex-end">
+                        <Button variant="subtle" onClick={HandleDismissUpdate}>
+                            稍后
+                        </Button>
+                        <Button
+                            leftSection={<IconDownload size={16} />}
+                            onClick={HandleDownloadUpdate}
+                        >
+                            下载
+                        </Button>
+                    </Group>
+                </Stack>
+            </Modal>
             <AppShell
                 navbar={{ width: 220, breakpoint: 0 }}
                 padding="md"

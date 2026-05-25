@@ -1,14 +1,17 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } from "electron";
+import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, shell } from "electron";
 import path from "node:path";
 import { DatabaseService } from "./database";
 import { ConfigService } from "./config";
 import { CommunityService, GetCurrentWeekId } from "./community";
+import { UpdateService } from "./updateService";
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let databaseService: DatabaseService | null = null;
 let configService: ConfigService | null = null;
 let communityService: CommunityService | null = null;
+let updateService: UpdateService | null = null;
+let isQuitting: boolean = false;
 
 const IS_DEV: boolean = process.env.ELECTRON_RENDERER_URL !== undefined;
 
@@ -19,6 +22,8 @@ function CreateWindow(): void {
     console.log("[Main] __dirname:", __dirname);
     console.log("[Main] Dev mode:", IS_DEV);
 
+    const iconPath: string = path.join(__dirname, "../../resources/stopwatch.png");
+
     mainWindow = new BrowserWindow({
         width: 960,
         height: 680,
@@ -26,12 +31,18 @@ function CreateWindow(): void {
         minHeight: 600,
         backgroundColor: "#f5f5f5",
         show: false,
+        icon: iconPath,
         webPreferences: {
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
         },
     });
+
+    // 隐藏菜单栏（仅在开发模式下显示）
+    if (!IS_DEV) {
+        mainWindow.setMenuBarVisibility(false);
+    }
 
     mainWindow.once("ready-to-show", () => {
         console.log("[Main] Window ready-to-show");
@@ -70,7 +81,7 @@ function CreateWindow(): void {
 
     // 关闭窗口时缩到托盘而不是退出
     mainWindow.on("close", (event) => {
-        if (tray !== null) {
+        if (tray !== null && !isQuitting) {
             event.preventDefault();
             mainWindow?.hide();
         }
@@ -78,10 +89,8 @@ function CreateWindow(): void {
 }
 
 function CreateTray(): void {
-    // 16x16 蓝色方块占位图标 (#2196f3)
-    const icon = nativeImage.createFromDataURL(
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGNQnPaZJMQwqmFUw/DVAACnNaoQK5bsTwAAAABJRU5ErkJggg=="
-    );
+    const iconPath: string = path.join(__dirname, "../../resources/stopwatch.png");
+    const icon: Electron.NativeImage = nativeImage.createFromPath(iconPath);
 
     tray = new Tray(icon);
     tray.setToolTip("牛子小助手");
@@ -96,6 +105,7 @@ function CreateTray(): void {
         {
             label: "退出",
             click: (): void => {
+                isQuitting = true;
                 tray = null;
                 app.quit();
             },
@@ -194,29 +204,76 @@ function RegisterIpcHandlers(): void {
             weeklyStats.AvgDuration
         );
     });
+
+    ipcMain.handle("updates:get-state", () => {
+        return updateService!.GetState();
+    });
+
+    ipcMain.handle("updates:get-settings", () => {
+        return updateService!.GetSettings();
+    });
+
+    ipcMain.handle("updates:set-source", (_event, source: string) => {
+        return updateService!.SetSource(source);
+    });
+
+    ipcMain.handle("updates:check", () => {
+        return updateService!.CheckForUpdates();
+    });
+
+    ipcMain.handle("updates:download", () => {
+        return updateService!.DownloadUpdate();
+    });
+
+    ipcMain.handle("updates:install", () => {
+        isQuitting = true;
+        updateService!.InstallUpdate();
+    });
+
+    ipcMain.handle("shell:open-external", (_event, url: string) => {
+        return shell.openExternal(url);
+    });
 }
 
-app.whenReady().then(async () => {
-    console.log("[Main] App ready");
-    databaseService = await DatabaseService.create();
-    console.log("[Main] DatabaseService initialized");
-    configService = new ConfigService();
-    communityService = new CommunityService(configService.GetConfig().ApiEndpoint);
-    console.log("[Main] ConfigService & CommunityService initialized");
-    RegisterIpcHandlers();
-    CreateWindow();
-    CreateTray();
-    console.log("[Main] Startup complete");
-
-    app.on("activate", () => {
-        // macOS: 点击 dock 图标时重新创建窗口
-        if (BrowserWindow.getAllWindows().length === 0) {
-            CreateWindow();
-        } else {
-            mainWindow?.show();
+// 单例锁：禁止多个实例，防止多个托盘图标
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    console.log("[Main] Another instance is running, quitting");
+    app.quit();
+} else {
+    app.on("second-instance", () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
+            mainWindow.show();
+            mainWindow.focus();
         }
     });
-});
+
+    app.whenReady().then(async () => {
+        console.log("[Main] App ready");
+        databaseService = await DatabaseService.create();
+        console.log("[Main] DatabaseService initialized");
+        configService = new ConfigService();
+        communityService = new CommunityService(configService.GetConfig().ApiEndpoint);
+        console.log("[Main] ConfigService & CommunityService initialized");
+        updateService = new UpdateService(() => mainWindow);
+        RegisterIpcHandlers();
+        CreateWindow();
+        CreateTray();
+        updateService.StartStartupCheck();
+        console.log("[Main] Startup complete");
+
+        app.on("activate", () => {
+            if (BrowserWindow.getAllWindows().length === 0) {
+                CreateWindow();
+            } else {
+                mainWindow?.show();
+            }
+        });
+    });
+}
 
 // 所有窗口关闭时退出（除了 macOS）
 app.on("window-all-closed", () => {
@@ -226,6 +283,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+    isQuitting = true;
     tray = null;
     databaseService?.Close();
 });

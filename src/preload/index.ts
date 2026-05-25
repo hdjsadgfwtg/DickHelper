@@ -1,4 +1,5 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import type { IUpdateSettings, IUpdateState, UpdateSource } from "@dickhelper/shared";
 
 console.log("[Preload] Script loading...");
 
@@ -13,6 +14,12 @@ const electronAPI = {
     GetDailyCounts: (startTimestamp: number, endTimestamp: number): Promise<unknown[]> =>
         ipcRenderer.invoke("records:get-daily-counts", startTimestamp, endTimestamp),
     ImportRecords: (records: unknown[]): Promise<unknown> => ipcRenderer.invoke("records:import", records),
+    GetUpdateState: (): Promise<IUpdateState> => ipcRenderer.invoke("updates:get-state"),
+    GetUpdateSettings: (): Promise<IUpdateSettings> => ipcRenderer.invoke("updates:get-settings"),
+    SetUpdateSource: (source: UpdateSource): Promise<IUpdateSettings> => ipcRenderer.invoke("updates:set-source", source),
+    CheckForUpdates: (): Promise<IUpdateState> => ipcRenderer.invoke("updates:check"),
+    DownloadUpdate: (): Promise<IUpdateState> => ipcRenderer.invoke("updates:download"),
+    InstallUpdate: (): Promise<void> => ipcRenderer.invoke("updates:install"),
     OnRecordsUpdated: (callback: () => void): (() => void) => {
         const listener = (): void => callback();
         ipcRenderer.on("records-updated", listener);
@@ -20,10 +27,16 @@ const electronAPI = {
             ipcRenderer.removeListener("records-updated", listener);
         };
     },
-    // 配置
+    OnUpdateStateChanged: (callback: (state: IUpdateState) => void): (() => void) => {
+        const listener = (_event: IpcRendererEvent, state: IUpdateState): void => callback(state);
+        ipcRenderer.on("updates:state-changed", listener);
+        return () => {
+            ipcRenderer.removeListener("updates:state-changed", listener);
+        };
+    },
+    OpenExternal: (url: string): Promise<void> => ipcRenderer.invoke("shell:open-external", url),
     GetConfig: (): Promise<unknown> => ipcRenderer.invoke("config:get"),
     SetConfig: (partial: { CommunityOptIn?: boolean }): Promise<unknown> => ipcRenderer.invoke("config:set", partial),
-    // 社区统计
     GetCommunityStats: (): Promise<unknown> => ipcRenderer.invoke("community:get-stats"),
     SubmitCommunityStats: (): Promise<boolean> => ipcRenderer.invoke("community:submit"),
 };

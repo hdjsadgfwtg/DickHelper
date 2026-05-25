@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
+    Alert,
     Paper,
     Stack,
     Title,
@@ -7,17 +8,63 @@ import {
     Group,
     Text,
     Notification,
+    Progress,
     rem,
     Divider,
     Badge,
     Switch,
+    SegmentedControl,
 } from "@mantine/core";
-import { IconDownload, IconUpload, IconDatabase, IconInfoCircle, IconUsers } from "@tabler/icons-react";
+import {
+    IconAlertCircle,
+    IconDatabase,
+    IconDownload,
+    IconInfoCircle,
+    IconRefresh,
+    IconRocket,
+    IconStar,
+    IconUpload,
+    IconUsers,
+    IconWorld,
+} from "@tabler/icons-react";
 import { DatabaseService } from "../services/DatabaseService";
+import { UpdateService } from "../services/UpdateService";
 import { useRecords } from "../hooks/useRecords";
+import { useUpdateState } from "../hooks/useUpdateState";
+import type { UpdateSource, UpdateStatus } from "@dickhelper/shared";
+
+const GetUpdateStatusText = (status: UpdateStatus | undefined): string => {
+    switch (status) {
+        case "checking":
+            return "检查中";
+        case "available":
+            return "发现新版本";
+        case "downloading":
+            return "下载中";
+        case "downloaded":
+            return "已下载";
+        case "not-available":
+            return "已是最新";
+        case "error":
+            return "检查失败";
+        case "disabled":
+            return "开发模式";
+        default:
+            return "空闲";
+    }
+};
+
+const GetUpdateSourceValue = (value: string): UpdateSource => {
+    if (value === "github") {
+        return "github";
+    }
+
+    return "mirror";
+};
 
 export const Settings = () => {
     const { records, refresh } = useRecords();
+    const { UpdateState } = useUpdateState();
     const [importMessage, setImportMessage] = useState<string | null>(null);
     const [communityOptIn, setCommunityOptIn] = useState<boolean>(false);
     const [configLoaded, setConfigLoaded] = useState<boolean>(false);
@@ -35,6 +82,13 @@ export const Settings = () => {
         setCommunityOptIn(checked);
         await DatabaseService.SetConfig({ CommunityOptIn: checked });
     };
+
+    const updateSource: UpdateSource = UpdateState?.Source ?? "mirror";
+    const currentVersion: string = UpdateState?.CurrentVersion ?? "2.0.0";
+    const updateStatusText: string = GetUpdateStatusText(UpdateState?.Status);
+    const updateProgress: number = UpdateState?.DownloadProgress ?? 0;
+    const isChecking: boolean = UpdateState?.IsChecking === true;
+    const isDownloading: boolean = UpdateState?.IsDownloading === true;
 
     const HandleExport = async (): Promise<void> => {
         const allRecords = await DatabaseService.GetRecords();
@@ -79,6 +133,22 @@ export const Settings = () => {
             HandleImport(file);
         }
         e.target.value = "";
+    };
+
+    const HandleSourceChange = (value: string): void => {
+        void UpdateService.SetSource(GetUpdateSourceValue(value));
+    };
+
+    const HandleCheckUpdate = (): void => {
+        void UpdateService.CheckForUpdates();
+    };
+
+    const HandleDownloadUpdate = (): void => {
+        void UpdateService.DownloadUpdate();
+    };
+
+    const HandleInstallUpdate = (): void => {
+        void UpdateService.InstallUpdate();
     };
 
     return (
@@ -167,6 +237,102 @@ export const Settings = () => {
             </Paper>
 
             <Paper shadow="sm" radius="md" p="lg" withBorder>
+                <Group justify="space-between" align="flex-start" mb="xs">
+                    <Group gap="sm">
+                        <IconWorld size={22} />
+                        <Title order={4}>应用更新</Title>
+                    </Group>
+                    <Badge
+                        variant="light"
+                        color={UpdateState?.Status === "error" ? "red" : "blue"}
+                    >
+                        {updateStatusText}
+                    </Badge>
+                </Group>
+
+                <Text size="sm" c="dimmed" mb="md">
+                    启动时自动检查更新，发现新版本后由您决定是否下载。
+                </Text>
+
+                <Stack gap="md">
+                    <Group justify="space-between" align="center">
+                        <Text size="sm" c="dimmed">更新源</Text>
+                        <SegmentedControl
+                            value={updateSource}
+                            onChange={HandleSourceChange}
+                            data={[
+                                { label: "ghfast 镜像", value: "mirror" },
+                                { label: "GitHub 直连", value: "github" },
+                            ]}
+                        />
+                    </Group>
+
+                    <Divider />
+
+                    <Group justify="space-between">
+                        <Text size="sm" c="dimmed">当前版本</Text>
+                        <Text size="sm" fw={500}>v{currentVersion}</Text>
+                    </Group>
+
+                    {UpdateState?.AvailableVersion !== null && UpdateState?.AvailableVersion !== undefined && (
+                        <>
+                            <Divider />
+                            <Group justify="space-between">
+                                <Text size="sm" c="dimmed">可用版本</Text>
+                                <Text size="sm" fw={500}>v{UpdateState.AvailableVersion}</Text>
+                            </Group>
+                        </>
+                    )}
+
+                    {isDownloading && (
+                        <Progress value={updateProgress} animated />
+                    )}
+
+                    {UpdateState?.ErrorMessage !== null && UpdateState?.ErrorMessage !== undefined && (
+                        <Alert
+                            color="red"
+                            icon={<IconAlertCircle size={18} />}
+                            title="更新失败"
+                        >
+                            {UpdateState.ErrorMessage}
+                        </Alert>
+                    )}
+
+                    <Group>
+                        <Button
+                            variant="outline"
+                            leftSection={<IconRefresh style={{ width: rem(16), height: rem(16) }} />}
+                            onClick={HandleCheckUpdate}
+                            loading={isChecking}
+                            disabled={isDownloading}
+                        >
+                            检查更新
+                        </Button>
+
+                        {UpdateState?.IsUpdateAvailable === true && (
+                            <Button
+                                leftSection={<IconDownload style={{ width: rem(16), height: rem(16) }} />}
+                                onClick={HandleDownloadUpdate}
+                                loading={isDownloading}
+                            >
+                                下载更新
+                            </Button>
+                        )}
+
+                        {UpdateState?.IsUpdateDownloaded === true && (
+                            <Button
+                                color="green"
+                                leftSection={<IconRocket style={{ width: rem(16), height: rem(16) }} />}
+                                onClick={HandleInstallUpdate}
+                            >
+                                重启安装
+                            </Button>
+                        )}
+                    </Group>
+                </Stack>
+            </Paper>
+
+            <Paper shadow="sm" radius="md" p="lg" withBorder>
                 <Group gap="sm" mb="xs">
                     <IconInfoCircle size={22} />
                     <Title order={4}>关于</Title>
@@ -180,13 +346,18 @@ export const Settings = () => {
                     <Divider />
                     <Group justify="space-between">
                         <Text size="sm" c="dimmed">版本</Text>
-                        <Text size="sm" fw={500}>v2.0.0</Text>
+                        <Text size="sm" fw={500}>v{currentVersion}</Text>
                     </Group>
                     <Divider />
-                    <Group justify="space-between">
-                        <Text size="sm" c="dimmed">技术栈</Text>
-                        <Text size="sm" fw={500}>Electron + React + Mantine</Text>
-                    </Group>
+                    <Button
+                        variant="light"
+                        color="yellow"
+                        fullWidth
+                        leftSection={<IconStar style={{ width: rem(16), height: rem(16) }} />}
+                        onClick={() => { void window.electronAPI.OpenExternal("https://github.com/zzzdajb/DickHelper"); }}
+                    >
+                        喜欢这个应用？去 GitHub 给项目点个 Star
+                    </Button>
                 </Stack>
             </Paper>
         </Stack>
