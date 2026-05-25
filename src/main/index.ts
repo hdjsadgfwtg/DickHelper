@@ -257,9 +257,9 @@ function RegisterIpcHandlers(): void {
     ]);
 
     ipcMain.handle("settings:get", (...args) => {
-        const key: string = args[1] as string;
-        if (!ALLOWED_SETTINGS.has(key)) {
-            throw new Error(`不允许的设置项: ${key}`);
+        const key: unknown = args[1];
+        if (typeof key !== "string" || !ALLOWED_SETTINGS.has(key)) {
+            throw new Error(`不允许的设置项: ${String(key)}`);
         }
         if (key === "ai_api_key") {
             return databaseService!.GetSecureSetting(key);
@@ -268,10 +268,10 @@ function RegisterIpcHandlers(): void {
     });
 
     ipcMain.handle("settings:set", (...args) => {
-        const key: string = args[1] as string;
-        const value: string = args[2] as string;
-        if (!ALLOWED_SETTINGS.has(key)) {
-            throw new Error(`不允许的设置项: ${key}`);
+        const key: unknown = args[1];
+        const value: unknown = args[2];
+        if (typeof key !== "string" || typeof value !== "string" || !ALLOWED_SETTINGS.has(key)) {
+            throw new Error(`不允许的设置项: ${String(key)}`);
         }
         if (key === "ai_api_key") {
             databaseService!.SetSecureSetting(key, value);

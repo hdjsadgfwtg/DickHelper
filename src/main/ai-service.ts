@@ -70,6 +70,10 @@ const ExtractOpenAiText = (result: unknown): string => {
 };
 
 const AnalyzeWithApi = async (data: IAiAnalysisData, config: IAiConfig): Promise<string> => {
+    const parsed = new URL(config.ApiEndpoint);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        throw new Error("API 地址仅支持 http/https 协议");
+    }
     const response = await FetchWithTimeout(config.ApiEndpoint, {
         method: "POST",
         headers: {
@@ -83,7 +87,8 @@ const AnalyzeWithApi = async (data: IAiAnalysisData, config: IAiConfig): Promise
         }),
     });
     if (!response.ok) {
-        throw new Error(`API 错误: ${response.status}`);
+        const body: string = await response.text().catch(() => "");
+        throw new Error(`API 错误 ${response.status}: ${body.slice(0, 200)}`);
     }
     return ExtractOpenAiText(await response.json());
 };
@@ -104,12 +109,14 @@ const AnalyzeLocally = (data: IAiAnalysisData): string => {
         insights.push(`📍 高峰时段集中在${period} ${top.Hour}:00 左右（${top.Count} 次）。`);
     }
 
-    const peakDay = data.WeekdayDistribution.reduce(
-        (max, d) => (d.Count > max.Count ? d : max),
-        data.WeekdayDistribution[0]!
-    );
-    if (peakDay.Count > 0) {
-        insights.push(`📅 ${WEEKDAY_NAMES[peakDay.Weekday] ?? "?"}是最活跃的一天（${peakDay.Count} 次）。`);
+    if (data.WeekdayDistribution.length > 0) {
+        const peakDay = data.WeekdayDistribution.reduce(
+            (max, d) => (d.Count > max.Count ? d : max),
+            data.WeekdayDistribution[0]!
+        );
+        if (peakDay.Count > 0) {
+            insights.push(`📅 ${WEEKDAY_NAMES[peakDay.Weekday] ?? "?"}是最活跃的一天（${peakDay.Count} 次）。`);
+        }
     }
 
     const weeklyAvg: number = data.FrequencyPerMonth / 4;
