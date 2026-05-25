@@ -1,4 +1,4 @@
-import type { IRecord } from "../types/IRecord";
+import type { IRecord } from "@dickhelper/shared";
 
 // 预测结果
 export interface IPrediction {

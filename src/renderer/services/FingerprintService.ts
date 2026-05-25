@@ -1,4 +1,4 @@
-import type { IRecord } from "../types/IRecord";
+import type { IRecord } from "@dickhelper/shared";
 
 export interface IFingerprintConfig {
     readonly Size: number;           // canvas 尺寸 (正方形)

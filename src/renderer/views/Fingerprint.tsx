@@ -3,7 +3,7 @@ import { Paper, Title, Stack, Text, Group, Button, Badge, SimpleGrid, Box } from
 import { IconDownload, IconRefresh } from "@tabler/icons-react";
 import { DatabaseService } from "../services/DatabaseService";
 import { FingerprintService } from "../services/FingerprintService";
-import type { IRecord } from "../types/IRecord";
+import type { IRecord } from "@dickhelper/shared";
 
 const DAY_LABELS: string[] = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 

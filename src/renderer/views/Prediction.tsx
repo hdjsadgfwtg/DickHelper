@@ -3,7 +3,7 @@ import { Paper, Title, Stack, Text, Group, Box, SimpleGrid, ThemeIcon, RingProgr
 import { IconBolt, IconClock, IconFlame, IconMoon, IconSun, IconCalendar } from "@tabler/icons-react";
 import { DatabaseService } from "../services/DatabaseService";
 import { PredictionService, type IPrediction } from "../services/PredictionService";
-import type { IRecord } from "../types/IRecord";
+import type { IRecord } from "@dickhelper/shared";
 
 const WEEKDAY_LABELS: string[] = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
